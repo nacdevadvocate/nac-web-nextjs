@@ -46,7 +46,7 @@ const SimSwap: React.FC = () => {
     try {
       setLoading(true); // Start loading
       const response = await axios.post(
-        "https://sim-swap.p-eu.rapidapi.com/sim-swap/sim-swap/v0/retrieve-date", // Replace with actual endpoint
+        CREDENTIALS.SIMSWAP_URL, // Replace with actual endpoint
         { phoneNumber },
         {
           headers: {
