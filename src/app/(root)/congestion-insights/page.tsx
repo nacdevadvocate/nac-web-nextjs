@@ -4,31 +4,29 @@ import Tab from "@/components/Tab";
 import Tabs from "@/components/Tabs";
 import { useMessage } from "@/contexts/message";
 import { CREDENTIALS } from "@/data/credential";
-import { deviceStatusTypes } from "@/data/data";
 import { useLocalStorageBase64 } from "@/hooks/useLocalStorage64";
 import { useSessionStorage } from "@/hooks/useSessionStorage";
 import { jsonToTableData } from "@/utils/copy";
+import { BiCheckCircle } from "react-icons/bi";
+import { BsExclamationCircle } from "react-icons/bs";
 import { isAxiosError } from "@/utils/isAxiosError";
 import {
   Device,
-  DeviceCamara,
   IPv4Address,
   JsonObject,
   JsonValue,
-  Subscription,
-  // SubscriptionData,
+  QueryData,
+  SessData,
 } from "@/utils/types";
+
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { BiCheckCircle } from "react-icons/bi";
-import { BsExclamationCircle } from "react-icons/bs";
 import { FaCopy } from "react-icons/fa";
 
 interface FormValues {
   phoneNumber?: string;
   networkAccessIdentifier?: string;
   identifier?: string;
-  type: string;
   devicePublicIp?: string;
   devicePrivateIp?: string;
   devicePublicPort?: number;
@@ -47,7 +45,7 @@ interface DataType {
   [key: string]: JsonValue;
 }
 
-const DeviceStatus = () => {
+const CongestionInsights = () => {
   const [devices] = useLocalStorageBase64<Device[]>("devices", []);
   const [selectedToken] = useLocalStorageBase64<string | null>(
     "selectedToken",
@@ -68,7 +66,6 @@ const DeviceStatus = () => {
     phoneNumber: "",
     networkAccessIdentifier: "",
     identifier: "",
-    type: deviceStatusTypes[0] || "",
     devicePublicIp: "",
     devicePrivateIp: "",
     devicePublicPort: 0,
@@ -85,10 +82,11 @@ const DeviceStatus = () => {
     useState<SubscriptionData | null>(null);
   const [data, setData] = useState<DataType | null>(null);
   const [showResponse, setShowResponse] = useState(false);
-  const [showResponseRoaming, setShowResponseRoaming] = useState(false);
-  const [showConnResponse, setShowConnResponse] = useState(null);
+  const [showQueryResponse, setShowQueryResponse] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-
   const [isMobileView, setIsMobileView] = useState(false);
 
   // Listen for screen resize
@@ -131,18 +129,6 @@ const DeviceStatus = () => {
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
 
-    // Type validation
-    if (!formValues.type) {
-      newErrors.type = "Type is required";
-    }
-
-    // // Duration validation
-    // if (!formValues.duration) {
-    //   newErrors.duration = "Duration is required";
-    // } else if (formValues.duration <= 0) {
-    //   newErrors.duration = "Duration must be greater than 0";
-    // }
-
     // At least one of these fields must be provided
     if (!formValues.identifier) {
       newErrors.deviceInfo =
@@ -159,7 +145,6 @@ const DeviceStatus = () => {
   console.log(errors);
 
   const initialFormValues: FormValues = {
-    type: deviceStatusTypes[0],
     notificationUrl: "",
   };
 
@@ -169,7 +154,9 @@ const DeviceStatus = () => {
     if (!validateForm()) return console.log("Error happened");
 
     // Constructing sessData with only defined properties
-    const sessData: Subscription = {};
+    const sessData: SessData = {};
+
+    console.log({ formValues });
 
     // Device Information
     if (
@@ -177,26 +164,16 @@ const DeviceStatus = () => {
       formValues.devicePublicIp ||
       formValues.deviceIpv6
     ) {
-      // Initialize subscriptionDetail.device if it doesn't exist
-      if (!sessData.subscriptionDetail) {
-        sessData.subscriptionDetail = {};
-      }
+      // Initialize device if it doesn't exist
+      sessData.device = {};
 
-      // type
-      if (formValues.type) {
-        sessData.subscriptionDetail.type = formValues.type;
-      }
-
-      if (!sessData.subscriptionDetail.device) {
-        sessData.subscriptionDetail.device = {};
-      }
+      console.log({ identifierType, formValues });
 
       if (formValues.identifier && identifierType === "phone") {
-        sessData.subscriptionDetail.device.phoneNumber = formValues.identifier;
+        sessData.device.phoneNumber = formValues.identifier;
       }
       if (formValues.identifier && identifierType === "nai") {
-        sessData.subscriptionDetail.device.networkAccessIdentifier =
-          formValues.identifier;
+        sessData.device.networkAccessIdentifier = formValues.identifier;
       }
 
       const ipv4Address: Partial<IPv4Address> = {};
@@ -211,11 +188,11 @@ const DeviceStatus = () => {
       }
 
       if (Object.keys(ipv4Address).length >= 2) {
-        sessData.subscriptionDetail.device.ipv4Address = ipv4Address;
+        sessData.device.ipv4Address = ipv4Address;
       }
 
       if (formValues.deviceIpv6) {
-        sessData.subscriptionDetail.device.ipv6Address = formValues.deviceIpv6;
+        sessData.device.ipv6Address = formValues.deviceIpv6;
       }
     }
 
@@ -246,13 +223,13 @@ const DeviceStatus = () => {
 
     try {
       const response = await axios.post(
-        `${CREDENTIALS.DEVICE_STATUS_URL}/subscriptions`, // Replace with actual endpoint
+        `${CREDENTIALS.CONGESTION_INSIGHT_URL}/subscriptions`, // Replace with actual endpoint
         sessData,
         {
           headers: {
             "content-type": "application/json",
             "X-RapidAPI-Key": selectedToken,
-            "X-RapidAPI-Host": CREDENTIALS.DEVICE_STATUS_HOST,
+            "X-RapidAPI-Host": CREDENTIALS.CONGESTION_INSIGHT_HOST,
           },
         }
       );
@@ -296,12 +273,12 @@ const DeviceStatus = () => {
     clearMessages();
     try {
       const response = await axios.get(
-        `${CREDENTIALS.DEVICE_STATUS_URL}/subscriptions/${subscriptionId}`, // Replace with actual endpoint
+        `${CREDENTIALS.CONGESTION_INSIGHT_URL}/subscriptions/${subscriptionId}`, // Replace with actual endpoint
         {
           headers: {
             "content-type": "application/json",
             "X-RapidAPI-Key": selectedToken,
-            "X-RapidAPI-Host": CREDENTIALS.DEVICE_STATUS_HOST,
+            "X-RapidAPI-Host": CREDENTIALS.CONGESTION_INSIGHT_HOST,
           },
         }
       );
@@ -344,12 +321,12 @@ const DeviceStatus = () => {
     clearMessages();
     try {
       const response = await axios.get(
-        `${CREDENTIALS.DEVICE_STATUS_URL}/subscriptions`, // Replace with actual endpoint
+        `${CREDENTIALS.CONGESTION_INSIGHT_URL}/subscriptions`, // Replace with actual endpoint
         {
           headers: {
             "content-type": "application/json",
             "X-RapidAPI-Key": selectedToken,
-            "X-RapidAPI-Host": CREDENTIALS.DEVICE_STATUS_HOST,
+            "X-RapidAPI-Host": CREDENTIALS.CONGESTION_INSIGHT_HOST,
           },
         }
       );
@@ -390,12 +367,12 @@ const DeviceStatus = () => {
     clearMessages();
     try {
       const response = await axios.delete(
-        `${CREDENTIALS.DEVICE_STATUS_URL}/subscriptions/${subscriptionId}`, // Replace with actual endpoint
+        `${CREDENTIALS.CONGESTION_INSIGHT_URL}/subscriptions/${subscriptionId}`, // Replace with actual endpoint
         {
           headers: {
             "content-type": "application/json",
             "X-RapidAPI-Key": selectedToken,
-            "X-RapidAPI-Host": CREDENTIALS.DEVICE_STATUS_HOST,
+            "X-RapidAPI-Host": CREDENTIALS.CONGESTION_INSIGHT_HOST,
           },
         }
       );
@@ -435,11 +412,7 @@ const DeviceStatus = () => {
     }
   };
 
-  type DeviceCamaraStatus = {
-    device?: DeviceCamara;
-  };
-
-  const requestConnectivity = async (e: React.FormEvent) => {
+  const requestQuery = async (e: React.FormEvent) => {
     e.preventDefault();
     setShowResponse(false);
 
@@ -449,7 +422,7 @@ const DeviceStatus = () => {
     console.log("Form submitted:", formValues);
 
     // Constructing sessData with only defined properties
-    const sessData: DeviceCamaraStatus = {};
+    const sessData: QueryData = {};
 
     // Device Information
     if (
@@ -468,22 +441,6 @@ const DeviceStatus = () => {
       if (formValues.identifier && identifierType === "nai") {
         sessData.device.networkAccessIdentifier = formValues.identifier;
       }
-
-      const ipv4Address: Partial<IPv4Address> = {};
-      if (formValues.devicePublicIp) {
-        ipv4Address.publicAddress = formValues.devicePublicIp;
-      }
-      if (formValues.devicePublicPort) {
-        ipv4Address.publicPort = formValues.devicePublicPort;
-      }
-
-      if (Object.keys(ipv4Address).length >= 2) {
-        sessData.device.ipv4Address = ipv4Address;
-      }
-
-      if (formValues.deviceIpv6) {
-        sessData.device.ipv6Address = formValues.deviceIpv6;
-      }
     }
 
     console.log("Final sessData:", sessData);
@@ -493,19 +450,19 @@ const DeviceStatus = () => {
 
     try {
       const response = await axios.post(
-        "https://device-status.p-eu.rapidapi.com/connectivity", // Replace with actual endpoint
+        `${CREDENTIALS.CONGESTION_INSIGHT_URL}/query`, // Replace with actual endpoint
         sessData,
         {
           headers: {
             "content-type": "application/json",
             "X-RapidAPI-Key": selectedToken,
-            "X-RapidAPI-Host": CREDENTIALS.DEVICE_STATUS_HOST,
+            "X-RapidAPI-Host": CREDENTIALS.CONGESTION_INSIGHT_HOST,
           },
         }
       );
 
       if (response.status === 200) {
-        setShowConnResponse(response.data);
+        setShowQueryResponse(response.data);
       }
 
       console.log("API Response:", response);
@@ -536,105 +493,6 @@ const DeviceStatus = () => {
     }
   };
 
-  const requestRoaming = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setShowResponseRoaming(false);
-
-    if (!validateForm()) return console.log("Error happened");
-    setLoading(true);
-
-    console.log("Form submitted:", formValues);
-
-    // Constructing sessData with only defined properties
-    const sessData: DeviceCamaraStatus = {};
-
-    // Device Information
-    if (
-      formValues.identifier ||
-      formValues.devicePublicIp ||
-      formValues.deviceIpv6
-    ) {
-      // Initialize device if it doesn't exist
-      if (!sessData.device) {
-        sessData.device = {};
-      }
-
-      console.log({ identifierType, formValues });
-
-      if (formValues.identifier && identifierType === "phone") {
-        sessData.device.phoneNumber = formValues.identifier;
-      }
-      if (formValues.identifier && identifierType === "nai") {
-        sessData.device.networkAccessIdentifier = formValues.identifier;
-      }
-
-      const ipv4Address: Partial<IPv4Address> = {};
-      if (formValues.devicePublicIp) {
-        ipv4Address.publicAddress = formValues.devicePublicIp;
-      }
-      if (formValues.devicePublicPort) {
-        ipv4Address.publicPort = formValues.devicePublicPort;
-      }
-
-      if (Object.keys(ipv4Address).length >= 2) {
-        sessData.device.ipv4Address = ipv4Address;
-      }
-
-      if (formValues.deviceIpv6) {
-        sessData.device.ipv6Address = formValues.deviceIpv6;
-      }
-    }
-
-    console.log("Final sessData:", sessData);
-
-    // API Request
-    clearMessages();
-
-    try {
-      const response = await axios.post(
-        "https://device-status.p-eu.rapidapi.com/roaming", // Replace with actual endpoint
-        sessData,
-        {
-          headers: {
-            "content-type": "application/json",
-            "X-RapidAPI-Key": selectedToken,
-            "X-RapidAPI-Host": CREDENTIALS.DEVICE_STATUS_HOST,
-          },
-        }
-      );
-
-      if (response.status === 200) {
-        setShowConnResponse(response.data);
-      }
-
-      console.log("API Response:", response);
-    } catch (error) {
-      if (isAxiosError(error)) {
-        let errorMessage = "An unexpected error occurred.";
-
-        if (error.response?.data) {
-          const { detail, message } = error.response.data;
-
-          if (Array.isArray(detail) && detail.length > 0 && detail[0]?.msg) {
-            errorMessage = detail.map((err) => err.msg).join(", ");
-          } else if (typeof detail === "string") {
-            errorMessage = detail;
-          } else if (message) {
-            errorMessage = message;
-          }
-        }
-
-        setError(errorMessage);
-      } else {
-        console.error("Non-Axios error:", error);
-        setError("An unexpected error occurred.");
-      }
-    } finally {
-      setShowResponseRoaming(true);
-      setLoading(false);
-    }
-  };
-
   // Function to copy JSON to clipboard
   const [copied, setCopied] = useState(false);
 
@@ -655,7 +513,7 @@ const DeviceStatus = () => {
 
   return (
     <div className="container font-work-sans">
-      <h1 className="text-3xl font-bold text-center">Device Status</h1>
+      <h1 className="text-3xl font-bold text-center">Congestion Insights</h1>
 
       <Tabs>
         {/* Create Subscriptions Tab */}
@@ -753,23 +611,6 @@ const DeviceStatus = () => {
                 )}
               </div>
 
-              {/* type */}
-              <div>
-                <label className="block text-sm font-semibold mb-1">Type</label>
-                <select
-                  name="type"
-                  value={formValues.type}
-                  className="input border border-gray-300 rounded-md w-full p-2"
-                  onChange={handleInputChange}
-                >
-                  {deviceStatusTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               {/* Expiry Date */}
               <div>
                 <label className="block text-sm font-semibold mb-1">
@@ -862,7 +703,7 @@ const DeviceStatus = () => {
               </div>
 
               {/* Notification Auth Token */}
-              <div>
+              {/* <div>
                 <label className="block text-sm font-semibold mb-1">
                   Notification Auth Token
                 </label>
@@ -874,7 +715,7 @@ const DeviceStatus = () => {
                   onChange={handleInputChange}
                   placeholder="c8974e592c2fa383d4a3960714"
                 />
-              </div>
+              </div> */}
             </div>
 
             {/* Submit Button */}
@@ -1191,8 +1032,8 @@ const DeviceStatus = () => {
           )}
         </Tab>
 
-        {/* Connectivity Tab */}
-        <Tab label={isMobileView ? "Connectivity" : "Connectivity"}>
+        {/* Query Tab */}
+        <Tab label={isMobileView ? "Query" : "Query"}>
           {/* Error Message */}
           {Object.keys(errors).length > 0 && (
             <div className="p-4 mb-6 text-sm text-red-700 bg-red-100 border border-red-200 rounded-md">
@@ -1214,7 +1055,7 @@ const DeviceStatus = () => {
             </div>
           )}
           <form
-            onSubmit={requestConnectivity}
+            onSubmit={requestQuery}
             className="space-y-6 bg-white p-6 rounded-md"
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1276,51 +1117,6 @@ const DeviceStatus = () => {
                   </p>
                 )}
               </div>
-
-              {/* Device IPv4 Public Address */}
-              <div>
-                <label className="block text-sm font-semibold mb-1">
-                  Device IPv4 Public Address
-                </label>
-                <input
-                  type="text"
-                  name="devicePublicIp"
-                  className="input border border-gray-300 rounded-md w-full p-2"
-                  value={formValues.devicePublicIp}
-                  onChange={handleInputChange}
-                  placeholder="233.252.0.2"
-                />
-              </div>
-
-              {/* Device Public Port */}
-              {/* <div>
-                <label className="block text-sm font-semibold mb-1">
-                  Device Public Port
-                </label>
-                <input
-                  type="number"
-                  name="devicePublicPort"
-                  className="input border border-gray-300 rounded-md w-full p-2"
-                  value={formValues.devicePublicPort}
-                  onChange={handleInputChange}
-                  placeholder="80"
-                />
-              </div> */}
-
-              {/* Device IPv6 Address */}
-              <div>
-                <label className="block text-sm font-semibold mb-1">
-                  Device IPv6 Address
-                </label>
-                <input
-                  type="text"
-                  name="deviceIpv6"
-                  className="input border border-gray-300 rounded-md w-full p-2"
-                  value={formValues.deviceIpv6}
-                  onChange={handleInputChange}
-                  placeholder="2001:db8:1234:5678:9abc:def0:fedc:ba98"
-                />
-              </div>
             </div>
 
             {/* Submit Button */}
@@ -1330,21 +1126,21 @@ const DeviceStatus = () => {
                 className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed w-full sm:w-auto"
                 disabled={loading} // Disable button when loading
               >
-                {loading ? "Checking..." : "Check Connectivity"}
+                {loading ? "Checking..." : "Query"}
               </button>
             </div>
           </form>
           {/* Loading Indicator */}
           {loading && (
             <div className="flex justify-center items-center h-52">
-              <Loading message="Checking Connectivity...." />
+              <Loading message="Checking...." />
             </div>
           )}
 
           {/* Animated Response Section */}
           {showResponse && (
             <div
-              className={`mt-8 p-6 rounded-lg shadow-lg transition-all duration-500 ease-in-out transform ${
+              className={`mt-2 p-2 rounded-lg transition-all duration-500 ease-in-out transform ${
                 showResponse ? "opacity-100 scale-100" : "opacity-0 scale-95"
               } bg-white`}
             >
@@ -1358,184 +1154,7 @@ const DeviceStatus = () => {
                     Raw Response:
                   </h2>
                   <pre className="bg-gray-100 text-gray-800 p-4 rounded-md overflow-x-auto">
-                    {JSON.stringify(showConnResponse, null, 2)}
-                  </pre>
-                </>
-              )}
-            </div>
-          )}
-        </Tab>
-
-        {/* Roaming Tab */}
-        <Tab label={isMobileView ? "Roaming" : "Roaming"}>
-          {/* Error Message */}
-          {Object.keys(errors).length > 0 && (
-            <div className="p-4 mb-6 text-sm text-red-700 bg-red-100 border border-red-200 rounded-md">
-              <div className="flex items-start">
-                <BsExclamationCircle className="w-5 h-5 mr-3 text-red-600" />
-                <div>
-                  <p className="font-semibold">
-                    Please fix the following errors:
-                  </p>
-                  <ul className="list-disc list-inside">
-                    {Object.entries(errors).map(([field, message]) => (
-                      <li key={field} className="mt-1">
-                        {message}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          )}
-          <form
-            onSubmit={requestRoaming}
-            className="space-y-6 bg-white p-6 rounded-md"
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label
-                  htmlFor="identifierTypeRoaming"
-                  className="block text-sm font-semibold mb-1"
-                >
-                  Select Identifier Type
-                </label>
-                <select
-                  id="identifierTypeRoaming"
-                  value={identifierType}
-                  onChange={(e) => {
-                    setIdentifierType(e.target.value as "phone" | "nai");
-                    setFormValues((prev) => ({
-                      ...prev,
-                      identifier: "", // Reset the identifier value
-                    }));
-                  }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="phone">Phone Number</option>
-                  <option value="nai">Network Access Identifier (NAI)</option>
-                </select>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="identifierRaoming"
-                  className="block text-sm font-semibold mb-1"
-                >
-                  {identifierType === "phone"
-                    ? "Phone Numbers"
-                    : "Network Access Identifiers (NAIs)"}
-                </label>
-                {filteredDevices.length > 0 ? (
-                  <select
-                    id="identifierRaoming"
-                    name="identifier"
-                    value={formValues.identifier}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="" disabled>
-                      Select{" "}
-                      {identifierType === "phone" ? "Phone Number" : "NAI"}
-                    </option>
-                    {filteredDevices.map((device, index) => (
-                      <option key={index} value={device.value}>
-                        {device.name} ({device.value})
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className="text-gray-500 text-sm">
-                    No {identifierType === "phone" ? "Phone Number" : "NAI"}{" "}
-                    available.
-                  </p>
-                )}
-              </div>
-
-              {/* Device IPv4 Public Address */}
-              <div>
-                <label className="block text-sm font-semibold mb-1">
-                  Device IPv4 Public Address
-                </label>
-                <input
-                  type="text"
-                  name="devicePublicIp"
-                  className="input border border-gray-300 rounded-md w-full p-2"
-                  value={formValues.devicePublicIp}
-                  onChange={handleInputChange}
-                  placeholder="233.252.0.2"
-                />
-              </div>
-
-              {/* Device Public Port */}
-              {/* <div>
-                <label className="block text-sm font-semibold mb-1">
-                  Device Public Port
-                </label>
-                <input
-                  type="number"
-                  name="devicePublicPort"
-                  className="input border border-gray-300 rounded-md w-full p-2"
-                  value={formValues.devicePublicPort}
-                  onChange={handleInputChange}
-                  placeholder="80"
-                />
-              </div> */}
-
-              {/* Device IPv6 Address */}
-              <div>
-                <label className="block text-sm font-semibold mb-1">
-                  Device IPv6 Address
-                </label>
-                <input
-                  type="text"
-                  name="deviceIpv6"
-                  className="input border border-gray-300 rounded-md w-full p-2"
-                  value={formValues.deviceIpv6}
-                  onChange={handleInputChange}
-                  placeholder="2001:db8:1234:5678:9abc:def0:fedc:ba98"
-                />
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed w-full sm:w-auto"
-                disabled={loading} // Disable button when loading
-              >
-                {loading ? "Checking..." : "Check Roaming"}
-              </button>
-            </div>
-          </form>
-          {/* Loading Indicator */}
-          {loading && (
-            <div className="flex justify-center items-center h-52">
-              <Loading message="Checking roaming...." />
-            </div>
-          )}
-
-          {/* Animated Response Section */}
-          {showResponseRoaming && (
-            <div
-              className={`mt-2 p-2 transition-all duration-500 ease-in-out transform ${
-                showResponseRoaming
-                  ? "opacity-100 scale-100"
-                  : "opacity-0 scale-95"
-              } bg-white`}
-            >
-              {error ? (
-                <p className="text-red-600 font-semibold text-center text-lg">
-                  {error}
-                </p>
-              ) : (
-                <>
-                  <h2 className="text-lg font-semibold text-gray-800 text-center mb-4">
-                    Raw Response:
-                  </h2>
-                  <pre className="bg-gray-100 text-gray-800 p-4 rounded-md overflow-x-auto">
-                    {JSON.stringify(showConnResponse, null, 2)}
+                    {JSON.stringify(showQueryResponse, null, 2)}
                   </pre>
                 </>
               )}
@@ -1547,4 +1166,4 @@ const DeviceStatus = () => {
   );
 };
 
-export default DeviceStatus;
+export default CongestionInsights;
