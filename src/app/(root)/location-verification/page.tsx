@@ -5,7 +5,7 @@ import axios from "axios";
 import dynamic from "next/dynamic";
 import { CREDENTIALS } from "@/data/credential";
 import { useLocalStorageBase64 } from "@/hooks/useLocalStorage64";
-import { Device } from "@/utils/types";
+import { DeviceEntry } from "@/utils/types";
 import { BiCheckCircle } from "react-icons/bi";
 import { BsFillClipboard2Fill } from "react-icons/bs";
 
@@ -30,7 +30,7 @@ type ApiResponse =
   | null;
 
 const LocationVerification: React.FC = () => {
-  const [devices] = useLocalStorageBase64<Device[]>("devices", []);
+  const [devices] = useLocalStorageBase64<DeviceEntry[]>("devices", []);
   const [selectedToken] = useLocalStorageBase64<string | null>(
     "selectedToken",
     null

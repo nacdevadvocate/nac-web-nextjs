@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { CREDENTIALS } from "@/data/credential";
 import { useLocalStorageBase64 } from "@/hooks/useLocalStorage64";
-import { Device } from "@/utils/types";
+import { DeviceEntry } from "@/utils/types";
 
 interface RetrieveResponse {
   latestSimChange: string;
@@ -27,7 +27,7 @@ const SimSwap: React.FC = () => {
   const [responseData, setResponseData] = useState<
     RetrieveResponse | CheckResponse | null
   >(null); // Store response data
-  const [devices] = useLocalStorageBase64<Device[]>("devices", []);
+  const [devices] = useLocalStorageBase64<DeviceEntry[]>("devices", []);
 
   // Filter phone numbers from the stored devices
   const phoneNumbers = devices?.filter((device) => device.category === "phone");

@@ -10,7 +10,7 @@ const MapLocation = dynamic(() => import("@/components/MapLocation"), {
   ssr: false,
 });
 import { useLocalStorageBase64 } from "@/hooks/useLocalStorage64";
-import { Device, LocationData } from "@/utils/types";
+import { DeviceEntry, LocationData } from "@/utils/types";
 import { BiCheckCircle } from "react-icons/bi";
 import { BsFillClipboard2Fill } from "react-icons/bs";
 
@@ -28,7 +28,7 @@ const LocationRetrieval: React.FC = () => {
     null
   );
 
-  const [devices] = useLocalStorageBase64<Device[]>("devices", []);
+  const [devices] = useLocalStorageBase64<DeviceEntry[]>("devices", []);
 
   const filteredDevices = devices?.filter(
     (device) => device.category === identifierType
