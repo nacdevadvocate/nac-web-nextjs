@@ -10,8 +10,8 @@ import { useSessionStorage } from "@/hooks/useSessionStorage";
 import { jsonToTableData } from "@/utils/copy";
 import { isAxiosError } from "@/utils/isAxiosError";
 import {
-  Device,
   DeviceCamara,
+  DeviceEntry,
   IPv4Address,
   JsonObject,
   JsonValue,
@@ -48,7 +48,7 @@ interface DataType {
 }
 
 const DeviceStatus = () => {
-  const [devices] = useLocalStorageBase64<Device[]>("devices", []);
+  const [devices] = useLocalStorageBase64<DeviceEntry[]>("devices", []);
   const [selectedToken] = useLocalStorageBase64<string | null>(
     "selectedToken",
     null

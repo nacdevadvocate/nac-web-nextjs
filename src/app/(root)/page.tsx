@@ -11,8 +11,12 @@ import {
   FaTrafficLight,
   FaMapMarkedAlt,
 } from "react-icons/fa";
+import { initialDevices } from "@/data/data";
+import { useLocalStorageBase64 } from "@/hooks/useLocalStorage64";
+import { DeviceEntry } from "@/utils/types";
 
 const Home: React.FC = () => {
+  const [] = useLocalStorageBase64<DeviceEntry[]>("devices", initialDevices);
   const routes = [
     {
       path: "/location-retrieval",

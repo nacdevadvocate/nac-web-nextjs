@@ -4,7 +4,7 @@ export interface IPv4Address {
   publicPort?: number;
 }
 
-export interface Device {
+export interface DeviceEntry {
   category: string;
   value: string;
   name: string;

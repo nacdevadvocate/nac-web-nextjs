@@ -11,7 +11,7 @@ import { BiCheckCircle } from "react-icons/bi";
 import { BsExclamationCircle } from "react-icons/bs";
 import { isAxiosError } from "@/utils/isAxiosError";
 import {
-  Device,
+  DeviceEntry,
   IPv4Address,
   JsonObject,
   JsonValue,
@@ -46,7 +46,7 @@ interface DataType {
 }
 
 const CongestionInsights = () => {
-  const [devices] = useLocalStorageBase64<Device[]>("devices", []);
+  const [devices] = useLocalStorageBase64<DeviceEntry[]>("devices", []);
   const [selectedToken] = useLocalStorageBase64<string | null>(
     "selectedToken",
     null
