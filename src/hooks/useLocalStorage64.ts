@@ -2,33 +2,34 @@
 import { useState, useEffect, useCallback } from "react";
 
 // Utility to encode/decode base64
-const encodeBase64 = (value: string) => btoa(value);
-const decodeBase64 = (value: string) => atob(value);
+const encodeBase64 = (value: unknown) => btoa(JSON.stringify(value));
+const decodeBase64 = (value: string) => JSON.parse(atob(value));
 
 export function useLocalStorageBase64<T>(key: string, initialValue: T) {
   const [storedValue, setStoredValue] = useState<T>(initialValue);
-  const [isClient, setIsClient] = useState(false); // To check if it's client-side
+  const [isClient, setIsClient] = useState(false);
 
-  // Set isClient to true once the component is mounted
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Read from localStorage after mounting
   useEffect(() => {
     if (isClient) {
       try {
         const item = localStorage.getItem(key);
         if (item) {
-          setStoredValue(JSON.parse(decodeBase64(item)));
+          setStoredValue(decodeBase64(item) as T);
+        } else {
+          // Save initial value if not present
+          localStorage.setItem(key, encodeBase64(initialValue));
+          setStoredValue(initialValue);
         }
       } catch (error) {
         console.error("Error reading localStorage key", key, error);
       }
     }
-  }, [key, isClient]);
+  }, [key, isClient, initialValue]);
 
-  // Save to localStorage
   const setValue = useCallback(
     (value: T) => {
       if (isClient) {
@@ -36,8 +37,7 @@ export function useLocalStorageBase64<T>(key: string, initialValue: T) {
           const valueToStore =
             value instanceof Function ? value(storedValue) : value;
           setStoredValue(valueToStore);
-          localStorage.setItem(key, encodeBase64(JSON.stringify(valueToStore)));
-          // Trigger a storage event manually
+          localStorage.setItem(key, encodeBase64(valueToStore));
           window.dispatchEvent(new Event("storage"));
         } catch (error) {
           console.error("Error setting localStorage key", key, error);
@@ -46,27 +46,6 @@ export function useLocalStorageBase64<T>(key: string, initialValue: T) {
     },
     [key, storedValue, isClient]
   );
-
-  // Listen to changes in localStorage
-  useEffect(() => {
-    if (isClient) {
-      const handleStorageChange = () => {
-        try {
-          const item = localStorage.getItem(key);
-          setStoredValue(item ? JSON.parse(decodeBase64(item)) : initialValue);
-        } catch (error) {
-          console.error(
-            "Error handling localStorage change for key",
-            key,
-            error
-          );
-        }
-      };
-
-      window.addEventListener("storage", handleStorageChange);
-      return () => window.removeEventListener("storage", handleStorageChange);
-    }
-  }, [key, initialValue, isClient]);
 
   return [storedValue, setValue] as const;
 }
