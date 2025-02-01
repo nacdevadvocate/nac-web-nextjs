@@ -71,6 +71,9 @@ const Navbar: React.FC = () => {
 
   const handleLinkClick = () => {
     setDropdownOpen(false); // Close dropdown when any link is clicked
+    if (isMobileMenuOpen) {
+      setMobileMenuOpen(false);
+    }
   };
 
   return (
